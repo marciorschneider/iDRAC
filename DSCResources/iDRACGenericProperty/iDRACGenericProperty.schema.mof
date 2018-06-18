@@ -3,5 +3,5 @@ class iDRACGenericProperty : OMI_BaseResource
 {
     [Key,        Description("Property Name.")] String PropertyName;
     [Key,        Description("Property Value.")] String PropertyValue;
-    [Write,      Description("Whether the property option should exist."), ValueMap{"Present"}, Values{"Present"}] String Ensure;
+    [Write,      Description("Whether the property option should exist."), ValueMap{"Present,Absent"}, Values{"Present,Absent"}] String Ensure;
 };
