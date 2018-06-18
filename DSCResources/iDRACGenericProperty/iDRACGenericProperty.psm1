@@ -100,7 +100,7 @@ function Test-TargetResource
 
     $currentValue = Get-TargetResource -PropertyName $PropertyName
     
-    $TestingPropertyMessage = $localizedData.TestingPropertyMessage -f $PropertyName
+    $TestingPropertyMessage = $localizedData.TestingPropertyMessage -f $PropertyName, $PropertyValue
     Write-Verbose $TestingPropertyMessage
 
     # Testing for Ensure = Present
@@ -108,10 +108,14 @@ function Test-TargetResource
     {
         if ($currentValue.PropertyValue -eq $PropertyValue)
         {
+            $MatchPropertyMessage = $localizedData.MatchPropertyMessage -f $PropertyName, $PropertyValue
+            Write-Verbose $MatchPropertyMessage
             $return = $true
         }
         else
         {
+            $NotMatchPropertyMessage = $localizedData.NotMatchPropertyMessage -f $PropertyName, $PropertyValue
+            Write-Verbose $NotMatchPropertyMessage
             $return = $false
         }
     }
@@ -169,7 +173,7 @@ function Set-TargetResource
     $currentValue = Get-TargetResource -PropertyName $PropertyName
 
     
-    $SettingPropertyMessage = $localizedData.SettingPropertyMessage -f $PropertyName
+    $SettingPropertyMessage = $localizedData.SettingPropertyMessage -f $PropertyName, $PropertyValue
     Write-Verbose $SettingPropertyMessage
     
     # Running the racadm.exe to set the property.
