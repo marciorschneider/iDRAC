@@ -1,8 +1,8 @@
-$currentPath = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
+# Load Localization Data
+Import-Module -Name (Join-Path -Path (Join-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) `
+                         -ChildPath 'Modules' ) -ChildPath 'CommonResourceHelper.psm1')
 
-#$modulePathhelper            = (Join-Path -Path (Split-Path -Path $currentPath -Parent) -ChildPath 'Helper.psm1')
-
-#Import-Module -Name $modulePathhelper
+$script:localizedData = Get-LocalizedData -ResourceName 'iDRACGenericProperty' -ScriptRoot $PSScriptRoot
 
 <#
     .SYNOPSIS
@@ -22,18 +22,12 @@ function Get-TargetResource
         [String]
         $PropertyName
     )
- 
     
-    try
-    {
-        # Running the racadm.exe to get the property. If the result code is 0 then we manipulate the output to extract the property value.
-        $output = racadm.exe ("get " + $PropertyName)
-    }
-    catch
-    {
-        $ErrorMsg = $_.Exception.Message
-        Write-Verbose $ErrorMsg
-    }
+    # Running the racadm.exe to get the property. If the result code is 0 then we manipulate the output to extract the property value.
+    $GettingPropertyMessage = $localizedData.GettingPropertyMessage -f $PropertyName
+    Write-Verbose $GettingPropertyMessage
+    $output = racadm.exe ("get " + $PropertyName)
+
     if ($LASTEXITCODE -eq 0)
     {
         # We want the second element in the output
@@ -54,8 +48,11 @@ function Get-TargetResource
         }
     }
 
+    # If the exit code from racadm is not equal zero we assume that was an error
     else
     {
+        Write-Error $LASTEXITCODE
+        
         $hashTable = @{
             PropertyName  = $null
             PropertyValue = $null
@@ -77,7 +74,7 @@ $hashTable
         The property value.
 
     .PARAMETER Ensure
-        When set to 'Present' the option will be created.
+        When set to 'Present' the option will be created. If set to 'Absent' value will be compared and if equal will return $false.
 #>
 function Test-TargetResource
 {
@@ -96,17 +93,20 @@ function Test-TargetResource
         $PropertyValue,        
         
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Present')]
+        [ValidateSet('Present','Absent')]
         [String]
         $Ensure
     )
 
-    $currentValue = Get-TargetResource -PropertyName $PropertyName -Ensure $Ensure
+    $currentValue = Get-TargetResource -PropertyName $PropertyName
     
+    $TestingPropertyMessage = $localizedData.TestingPropertyMessage -f $PropertyName
+    Write-Verbose $TestingPropertyMessage
+
     # Testing for Ensure = Present
     if ($Ensure -eq 'Present')
     {
-        if (($currentValue.Ensure -eq 'Present') -and ($currentValue.PropertyValue -eq $PropertyValue))
+        if ($currentValue.PropertyValue -eq $PropertyValue)
         {
             $return = $true
         }
@@ -118,13 +118,13 @@ function Test-TargetResource
     # Testing for Ensure = Absent
     else
     {
-        if ($currentValue.Ensure -eq 'Absent' -and $currentValue.PropertyValue -eq $null)
+        if ($currentValue.PropertyValue -ne $PropertyValue)
         {
             $return = $true
         }
         else
         {
-            $return = $true
+            $return = $false
         }
     }
 
@@ -143,7 +143,7 @@ function Test-TargetResource
         The property value.
 
     .PARAMETER Ensure
-        When set to 'Present' the option will be created.
+        When set to 'Present' the option will be created. If set to 'Absent will do nothing.'
 #>
 function Set-TargetResource
 {
@@ -161,22 +161,28 @@ function Set-TargetResource
         $PropertyValue,        
         
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Present')]
+        [ValidateSet('Present','Absent')]
         [String]
         $Ensure
     )
 
     $currentValue = Get-TargetResource -PropertyName $PropertyName
 
-    try
+    
+    $SettingPropertyMessage = $localizedData.SettingPropertyMessage -f $PropertyName
+    Write-Verbose $SettingPropertyMessage
+    
+    # Running the racadm.exe to set the property.
+    $output = racadm.exe "set $PropertyName $PropertyValue"
+
+    # If the exit code is not zero return it on the error output
+    if($LASTEXITCODE -ne 0)
     {
-        # Running the racadm.exe to set the property.
-        $output = racadm.exe "set $PropertyName $PropertyValue"
+        Write-Error $LASTEXITCODE
     }
-    catch
+    else
     {
-        $ErrorMsg = $_.Exception.Message
-        Write-Verbose $ErrorMsg
+        Write-Verbose "Sucess"
     }
 }
 
